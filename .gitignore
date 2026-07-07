@@ -11,8 +11,8 @@ yarn.lock
 .env.*.local
 
 # Build
-/dist
-/build
+dist/
+build/
 *.tsbuildinfo
 
 # IDE
