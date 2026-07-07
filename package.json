@@ -1,0 +1,43 @@
+{
+  "name": "global-ai-adoption-heatmap",
+  "version": "0.1.0",
+  "description": "Global AI Adoption Heat Map - Open-source platform for tracking AI adoption worldwide",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "docker-compose up",
+    "dev:down": "docker-compose down",
+    "dev:clean": "docker-compose down -v && rm -rf node_modules frontend/node_modules backend/node_modules",
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "test": "npm run test -w frontend && npm run test -w backend",
+    "test:watch": "concurrently 'npm run test:watch -w frontend' 'npm run test:watch -w backend'",
+    "lint": "npm run lint -w frontend && npm run lint -w backend",
+    "lint:fix": "npm run lint:fix -w frontend && npm run lint:fix -w backend",
+    "format": "npm run format -w frontend && npm run format -w backend",
+    "typecheck": "npm run typecheck -w frontend && npm run typecheck -w backend",
+    "prepare": "husky install"
+  },
+  "keywords": [
+    "ai",
+    "adoption",
+    "heatmap",
+    "open-source",
+    "analytics",
+    "data-visualization"
+  ],
+  "author": "Luca Ruboni <lucaruboni@gmail.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/global-ai-adoption-heatmap"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "husky": "^8.0.3"
+  }
+}

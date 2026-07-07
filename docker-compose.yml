@@ -1,0 +1,114 @@
+version: '3.9'
+
+services:
+  # Oracle Autonomous Database (local development)
+  oracle:
+    image: gvenzl/oracle-xe:23-alpine
+    container_name: ai-heatmap-oracle
+    environment:
+      ORACLE_RANDOM_PASSWORD: "true"
+      ORACLE_SID: XEPDB1
+      ORACLE_PDB: XEPDB1
+      ORACLE_ADMIN_USER: ADMIN
+      ORACLE_CHARACTERSET: AL32UTF8
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./database-migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - ai-heatmap-network
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    command:
+      - /bin/bash
+      - -c
+      - |
+        /opt/oracle/createdb.sh &&
+        lsnrctl start &&
+        sqlplus -s / as sysdba <<EOF
+        ALTER SESSION SET CONTAINER=XEPDB1;
+        CREATE USER aiheatmap IDENTIFIED BY aiheatmap_dev_123;
+        GRANT CONNECT, RESOURCE, DBA TO aiheatmap;
+        ALTER USER aiheatmap QUOTA UNLIMITED ON USERS;
+        EXIT;
+        EOF
+        tail -f /opt/oracle/diag/rdbms/xe/XEPDB1/trace/alert_XEPDB1.log
+
+  # Redis (caching + session store)
+  redis:
+    image: redis:7-alpine
+    container_name: ai-heatmap-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - ai-heatmap-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Node.js Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: ai-heatmap-backend
+    environment:
+      NODE_ENV: development
+      DATABASE_HOST: oracle
+      DATABASE_PORT: 1521
+      DATABASE_USER: aiheatmap
+      DATABASE_PASSWORD: aiheatmap_dev_123
+      DATABASE_NAME: XEPDB1
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: dev_secret_key_change_in_prod
+      LOG_LEVEL: debug
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/src:/app/src
+      - ./shared/types:/app/shared/types
+    depends_on:
+      oracle:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ai-heatmap-network
+    command: npm run dev
+
+  # Frontend (Vite dev server)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: ai-heatmap-frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000/api/v1
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./shared/types:/app/shared/types
+    depends_on:
+      - backend
+    networks:
+      - ai-heatmap-network
+    command: npm run dev
+
+volumes:
+  oracle-data:
+  redis-data:
+
+networks:
+  ai-heatmap-network:
+    driver: bridge

@@ -1,0 +1,61 @@
+{
+  "name": "@ai-heatmap/frontend",
+  "version": "0.1.0",
+  "description": "Global AI Adoption Heat Map - React Frontend",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "format": "prettier --write src",
+    "typecheck": "tsc --noEmit",
+    "a11y": "axe"
+  },
+  "keywords": [
+    "ai",
+    "adoption",
+    "heatmap",
+    "react",
+    "visualization"
+  ],
+  "author": "Luca Ruboni <lucaruboni@gmail.com>",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.1",
+    "zustand": "^4.4.7",
+    "axios": "^1.6.5",
+    "zod": "^3.22.4",
+    "react-hook-form": "^7.49.1",
+    "recharts": "^2.10.3",
+    "three": "^r158",
+    "vite-plugin-svgr": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@types/three": "^r158",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/ui": "^1.1.0",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/jest-dom": "^6.1.5",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "vitest": "^1.1.0",
+    "sass": "^1.69.5",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.2",
+    "axe-core": "^4.7.2"
+  }
+}

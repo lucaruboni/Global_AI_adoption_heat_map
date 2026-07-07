@@ -1,0 +1,16 @@
+{
+  "name": "@ai-heatmap/types",
+  "version": "0.1.0",
+  "description": "Shared types and interfaces for Global AI Adoption Heat Map",
+  "main": "types/index.ts",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["types", "typescript", "shared"],
+  "author": "Luca Ruboni <lucaruboni@gmail.com>",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,233 @@
+// Global AI Adoption Heat Map - Main Styles
+// Preserve MVP design aesthetic
+
+:root {
+  // Colors (from MVP)
+  --color-bg: #07090d;
+  --color-glow: rgba(255, 158, 44, 0.14);
+  --color-panel: rgba(13, 16, 22, 0.72);
+  --color-pb: rgba(255, 255, 255, 0.09);
+  --color-ink: #eef1f6;
+  --color-sub: #8b94a3;
+  --color-acc: #ffa42e;
+  --color-acc2: #ffd9a0;
+  --color-track: rgba(255, 255, 255, 0.1);
+  --color-chip: rgba(255, 164, 46, 0.12);
+
+  // Ocean / Land (theme colors)
+  --color-ocean: #0a1220;
+  --color-land: #22304a;
+  --color-border: rgba(160, 180, 220, 0.28);
+
+  // Spacing
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+
+  // Typography
+  --font-primary: 'Space Grotesk', Helvetica, Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-size-xs: 9px;
+  --font-size-sm: 10px;
+  --font-size-base: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+
+  // Transitions
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+
+  // Z-index
+  --z-base: 0;
+  --z-dropdown: 6;
+  --z-modal: 9;
+  --z-tooltip: 30;
+}
+
+// Dark mode is default
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #f3f1ec;
+    --color-panel: rgba(255, 255, 255, 0.85);
+    --color-pb: rgba(20, 22, 28, 0.09);
+    --color-ink: #191c22;
+    --color-sub: #69707d;
+    --color-acc: #d97400;
+    --color-acc2: #a15400;
+    --color-ocean: #d8d3c8;
+    --color-land: #faf8f3;
+    --color-border: rgba(60, 55, 45, 0.35);
+  }
+}
+
+// Reset & Base
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  overflow: hidden;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+}
+
+// Typography
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: var(--spacing-md);
+}
+
+h1 {
+  font-size: var(--font-size-2xl);
+}
+
+h2 {
+  font-size: var(--font-size-xl);
+}
+
+h3 {
+  font-size: var(--font-size-lg);
+}
+
+p {
+  margin-bottom: var(--spacing-md);
+}
+
+a {
+  color: var(--color-acc);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--color-acc2);
+  }
+}
+
+// Utilities
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100vh;
+  background: var(--color-bg);
+
+  .spinner {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-lg);
+    color: var(--color-acc);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+// Scrollbar styling
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-panel);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-acc);
+  border-radius: 4px;
+
+  &:hover {
+    background: var(--color-acc2);
+  }
+}
+
+// Form elements
+input,
+select,
+textarea {
+  font-family: var(--font-primary);
+  background: var(--color-panel);
+  color: var(--color-ink);
+  border: 1px solid var(--color-pb);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: 8px;
+  transition: border-color var(--transition-fast);
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-acc);
+  }
+
+  &::placeholder {
+    color: var(--color-sub);
+  }
+}
+
+button {
+  font-family: var(--font-primary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Container
+.container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+}
+
+// Responsive helpers
+.hidden-mobile {
+  @media (max-width: 900px) {
+    display: none;
+  }
+}
+
+.hidden-desktop {
+  @media (min-width: 901px) {
+    display: none;
+  }
+}
