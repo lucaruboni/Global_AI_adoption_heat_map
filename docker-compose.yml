@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   # Oracle Autonomous Database (local development)
   oracle:
