@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin:0; padding:0; background:#07090d; }
+    a { color:#ffa42e; } a:hover { color:#ffd9a0; }
+    @keyframes pulse { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+    input[type="range"]::-webkit-slider-thumb { cursor:pointer; }
+    ::-webkit-scrollbar { width:0; height:0; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.158.0/three.min.js"></script>
+  <script src="./aei-data.js"></script>
+  <script src="./world-topo.js"></script>
+</helmet>
+
+<div ref="{{ rootRef }}" data-screen-label="AI Pulse Globe" style="position:fixed; inset:0; background:var(--bg,#07090d); color:var(--ink,#eef1f6); font-family:'Space Grotesk',Helvetica,Arial,sans-serif; overflow:hidden; user-select:none;">
+
+  <div style="position:absolute; left:50%; top:50%; width:78vmin; height:78vmin; transform:translate(-50%,-50%); border-radius:50%; background:radial-gradient(circle, var(--glow,rgba(255,158,44,.14)) 0%, transparent 62%); pointer-events:none;"></div>
+
+  <div ref="{{ globeRef }}" style="position:absolute; inset:0; cursor:grab; touch-action:none;"></div>
+
+  <!-- Header -->
+  <div style="position:absolute; top:0; left:0; right:0; display:flex; align-items:center; gap:14px; padding:14px 18px; z-index:10; pointer-events:none; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:10px; pointer-events:auto;">
+      <div style="width:10px; height:10px; border-radius:50%; background:var(--acc,#ffa42e); box-shadow:0 0 14px var(--acc,#ffa42e); animation:pulse 2.4s ease-in-out infinite;"></div>
+      <div>
+        <div style="font-weight:700; font-size:17px; letter-spacing:.06em;">AI&nbsp;PULSE<span style="color:var(--acc,#ffa42e);">·</span>GLOBE</div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--sub,#8b94a3); letter-spacing:.04em;">where the world uses AI — Anthropic Economic Index · May 2026</div>
+      </div>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div style="position:relative; pointer-events:auto;">
+      <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search a country…" style="width:min(220px,44vw); padding:9px 13px; border-radius:99px; border:1px solid var(--pb,rgba(255,255,255,.1)); background:var(--panel,rgba(13,16,22,.72)); color:var(--ink,#eef1f6); font-family:'IBM Plex Mono',monospace; font-size:12px; outline:none; backdrop-filter:blur(10px);">
+      <sc-if value="{{ hasMatches }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; top:44px; left:0; right:0; background:var(--panel,rgba(13,16,22,.9)); border:1px solid var(--pb,rgba(255,255,255,.1)); border-radius:14px; overflow:hidden; backdrop-filter:blur(14px); box-shadow:0 12px 30px rgba(0,0,0,.35); z-index:12;">
+          <sc-for list="{{ matches }}" as="m" hint-placeholder-count="0">
+            <div onClick="{{ m.pick }}" style="display:flex; justify-content:space-between; gap:10px; padding:9px 13px; font-size:13px; cursor:pointer;" style-hover="background:var(--chip,rgba(255,164,46,.12));">
+              <span>{{ m.name }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace; color:var(--acc,#ffa42e); font-size:11px;">{{ m.usersF }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display:flex; gap:6px; pointer-events:auto; background:var(--panel,rgba(13,16,22,.72)); border:1px solid var(--pb,rgba(255,255,255,.1)); border-radius:99px; padding:4px; backdrop-filter:blur(10px);">
+      <sc-for list="{{ themes }}" as="t" hint-placeholder-count="3">
+        <button onClick="{{ t.set }}" title="{{ t.label }}" style="border:none; cursor:pointer; border-radius:99px; padding:6px 12px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.03em; background:{{ t.bg }}; color:{{ t.fg }}; transition:background .2s;">{{ t.short }}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ cyclePanels }}" style="pointer-events:auto; border:1px solid var(--pb,rgba(255,255,255,.1)); background:var(--panel,rgba(13,16,22,.72)); color:var(--ink,#eef1f6); border-radius:99px; padding:9px 14px; font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer; backdrop-filter:blur(10px);">{{ panelBtnLabel }}</button>
+    </sc-if>
+  </div>
+
+  <!-- Left column: stats + top 10 -->
+  <sc-if value="{{ showLeft }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute; left:16px; top:88px; bottom:100px; width:min(300px,88vw); display:flex; flex-direction:column; gap:12px; overflow-y:auto; z-index:6;">
+      <div style="background:var(--panel,rgba(13,16,22,.72)); border:1px solid var(--pb,rgba(255,255,255,.1)); border-radius:18px; padding:18px; backdrop-filter:blur(14px);">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.14em; color:var(--sub,#8b94a3); text-transform:uppercase;">Global · {{ year }}</div>
+        <div style="font-size:40px; font-weight:700; line-height:1.1; margin-top:6px; color:var(--acc,#ffa42e);">{{ totalF }}</div>
+        <div style="font-size:12px; color:var(--sub,#8b94a3); margin-top:2px;">of global AI usage happens in the top 10 countries</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:14px;">
+          <div style="background:var(--chip,rgba(255,164,46,.12)); border-radius:12px; padding:9px 10px;">
+            <div style="font-weight:700; font-size:15px;">{{ workF }}</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--sub,#8b94a3);">work usage</div>
+          </div>
+          <div style="background:var(--chip,rgba(255,164,46,.12)); border-radius:12px; padding:9px 10px;">
+            <div style="font-weight:700; font-size:15px;">{{ automF }}</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--sub,#8b94a3);">automation</div>
+          </div>
+          <div style="background:var(--chip,rgba(255,164,46,.12)); border-radius:12px; padding:9px 10px;">
+            <div style="font-weight:700; font-size:15px;">{{ countryCount }}</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--sub,#8b94a3);">countries</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--panel,rgba(13,16,22,.72)); border:1px solid var(--pb,rgba(255,255,255,.1)); border-radius:18px; padding:18px; backdrop-filter:blur(14px);">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.14em; color:var(--sub,#8b94a3); text-transform:uppercase; margin-bottom:12px;">Top 10 · share of global usage</div>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          <sc-for list="{{ top10 }}" as="r" hint-placeholder-count="10">
+            <div onClick="{{ r.pick }}" style="cursor:pointer;">
+              <div style="display:flex; justify-content:space-between; gap:8px; font-size:12.5px; margin-bottom:4px;">
+                <span><span style="font-family:'IBM Plex Mono',monospace; color:var(--sub,#8b94a3); font-size:10px; margin-right:7px;">{{ r.rank }}</span>{{ r.name }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace; color:var(--acc,#ffa42e); font-size:11px;">{{ r.usersF }}</span>
+              </div>
+              <div style="height:4px; border-radius:99px; background:var(--track,rgba(255,255,255,.1)); overflow:hidden;">
+                <div style="width:{{ r.pct }}%; height:100%; border-radius:99px; background:var(--acc,#ffa42e); transition:width .5s;"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Right column: regions + how it's used + topics -->
+  <sc-if value="{{ showRight }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute; right:16px; top:88px; bottom:100px; width:min(300px,88vw); display:flex; flex-direction:column; gap:12px; overflow-y:auto; z-index:6;">
+      <div style="background:var(--panel,rgba(13,16,22,.72)); border:1px solid var(--pb,rgba(255,255,255,.1)); border-radius:18px; padding:18px; backdrop-filter:blur(14px);">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.14em; color:var(--sub,#8b94a3); text-transform:uppercase; margin-bottom:12px;">Usage by region · {{ year }}</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <sc-for list="{{ regions }}" as="g" hint-placeholder-count="5">
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:4px;">
+                <span>{{ g.name }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--sub,#8b94a3);">{{ g.shareF }}</span>
+              </div>
+              <div style="height:5px; border-radius:99px; background:var(--track,rgba(255,255,255,.1)); overflow:hidden;">
+                <div style="width:{{ g.pct }}%; height:100%; border-radius:99px; background:linear-gradient(90deg, var(--acc,#ffa42e), var(--acc2,#ffd9a0)); transition:width .5s;"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background:var(--panel,rgba(13,16,22,.72)); border:1px solid var(--pb,rgba(255,255,255,.1)); border-radius:18px; padding:18px; backdrop-filter:blur(14px);">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.14em; color:var(--sub,#8b94a3); text-transform:uppercase; margin-bottom:12px;">How it's used</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <sc-for list="{{ useCases }}" as="uc" hint-placeholder-count="3">
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:4px;">
+                <span>{{ uc.name }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--acc,#ffa42e);">{{ uc.shareF }}</span>
+              </div>
+              <div style="height:5px; border-radius:99px; background:var(--track,rgba(255,255,255,.1)); overflow:hidden;">
+                <div style="width:{{ uc.pct }}%; height:100%; border-radius:99px; background:var(--acc,#ffa42e);"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--pb,rgba(255,255,255,.08));">
+          <div style="display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--sub,#8b94a3); margin-bottom:5px;">
+            <span>automation {{ automF }}</span><span>augmentation {{ augmF }}</span>
+          </div>
+          <div style="height:6px; border-radius:99px; background:var(--track,rgba(255,255,255,.1)); overflow:hidden; display:flex;">
+            <div style="width:{{ automPct }}%; background:var(--acc,#ffa42e);"></div>
+            <div style="flex:1; background:var(--acc2,#ffd9a0); opacity:.45;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--panel,rgba(13,16,22,.72)); border:1px solid var(--pb,rgba(255,255,255,.1)); border-radius:18px; padding:18px; backdrop-filter:blur(14px);">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.14em; color:var(--sub,#8b94a3); text-transform:uppercase; margin-bottom:12px;">Top request topics</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <sc-for list="{{ topics }}" as="tp" hint-placeholder-count="5">
+            <div>
+              <div style="display:flex; justify-content:space-between; gap:8px; font-size:12px; margin-bottom:4px;">
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ tp.name }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--sub,#8b94a3);">{{ tp.shareF }}</span>
+              </div>
+              <div style="height:4px; border-radius:99px; background:var(--track,rgba(255,255,255,.1)); overflow:hidden;">
+                <div style="width:{{ tp.pct }}%; height:100%; border-radius:99px; background:var(--acc,#ffa42e);"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Selected country card -->
+  <sc-if value="{{ sel }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; left:50%; bottom:104px; transform:translateX(-50%); width:min(420px,92vw); background:var(--panel,rgba(13,16,22,.82)); border:1px solid var(--pb,rgba(255,255,255,.12)); border-radius:20px; padding:18px; backdrop-filter:blur(16px); z-index:9; box-shadow:0 20px 50px rgba(0,0,0,.4);">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+        <div>
+          <div style="font-size:20px; font-weight:700;">{{ sel.name }}</div>
+          <div style="display:flex; gap:6px; margin-top:5px; flex-wrap:wrap;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; padding:3px 9px; border-radius:99px; background:var(--chip,rgba(255,164,46,.12)); color:var(--acc,#ffa42e);">{{ sel.region }}</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; padding:3px 9px; border-radius:99px; background:var(--chip,rgba(255,164,46,.12)); color:var(--acc,#ffa42e);">top: {{ sel.topic }}</span>
+          </div>
+        </div>
+        <button onClick="{{ clearSel }}" style="border:1px solid var(--pb,rgba(255,255,255,.12)); background:transparent; color:var(--sub,#8b94a3); border-radius:99px; width:28px; height:28px; cursor:pointer; font-size:13px; line-height:1; flex-shrink:0;">✕</button>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-top:14px;">
+        <div><div style="font-weight:700; font-size:16px; color:var(--acc,#ffa42e);">{{ sel.usersF }}</div><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--sub,#8b94a3);">global share</div></div>
+        <div><div style="font-weight:700; font-size:16px;">{{ sel.auiF }}</div><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--sub,#8b94a3);">per-capita idx</div></div>
+        <div><div style="font-weight:700; font-size:16px;">{{ sel.autonomyF }}</div><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--sub,#8b94a3);">AI autonomy /5</div></div>
+        <div><div style="font-weight:700; font-size:16px;">{{ sel.multiF }}</div><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--sub,#8b94a3);">multitasking</div></div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:7px; margin-top:14px; padding-top:12px; border-top:1px solid var(--pb,rgba(255,255,255,.08));">
+        <sc-for list="{{ sel.uses }}" as="u" hint-placeholder-count="3">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--sub,#8b94a3); width:76px; flex-shrink:0;">{{ u.name }}</span>
+            <div style="flex:1; height:4px; border-radius:99px; background:var(--track,rgba(255,255,255,.1)); overflow:hidden;">
+              <div style="width:{{ u.pct }}%; height:100%; border-radius:99px; background:var(--acc,#ffa42e);"></div>
+            </div>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--acc,#ffa42e); width:40px; text-align:right;">{{ u.shareF }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex; align-items:flex-end; gap:10px; height:48px; margin-top:12px; padding-top:10px; border-top:1px solid var(--pb,rgba(255,255,255,.08));">
+        <sc-for list="{{ sel.spark }}" as="s" hint-placeholder-count="4">
+          <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end; height:100%; gap:4px;">
+            <div style="height:{{ s.pct }}%; min-height:3px; border-radius:5px 5px 2px 2px; background:{{ s.color }};"></div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--sub,#8b94a3); text-align:center;">{{ s.y }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Time slider + view mode -->
+  <div style="position:absolute; left:50%; bottom:18px; transform:translateX(-50%); width:min(680px,94vw); display:flex; align-items:center; gap:12px; background:var(--panel,rgba(13,16,22,.72)); border:1px solid var(--pb,rgba(255,255,255,.1)); border-radius:99px; padding:8px 14px 8px 20px; backdrop-filter:blur(14px); z-index:7; flex-wrap:wrap;">
+    <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--sub,#8b94a3);">2023</span>
+    <input type="range" min="2023" max="2026" step="1" value="{{ year }}" onChange="{{ onYear }}" style="flex:1; min-width:120px; accent-color:var(--acc,#ffa42e); cursor:pointer;">
+    <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--sub,#8b94a3);">2026</span>
+    <span style="font-weight:700; font-size:17px; color:var(--acc,#ffa42e); min-width:48px; text-align:right;">{{ year }}</span>
+    <div style="width:1px; height:22px; background:var(--pb,rgba(255,255,255,.12));"></div>
+    <div style="display:flex; gap:4px;">
+      <sc-for list="{{ vizModes }}" as="v" hint-placeholder-count="3">
+        <button onClick="{{ v.set }}" title="{{ v.label }}" style="border:none; cursor:pointer; border-radius:99px; padding:7px 12px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.04em; background:{{ v.bg }}; color:{{ v.fg }}; transition:background .2s;">{{ v.short }}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- Footer / analytics -->
+  <div style="position:absolute; left:18px; bottom:22px; display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--sub,#8b94a3); z-index:7;">
+    <span>data: Anthropic Economic Index · CC-BY · pre-2026 backcast estimated</span>
+    <span style="opacity:.5;">|</span>
+    <span>{{ eventCount }} events</span>
+    <button onClick="{{ exportAnalytics }}" style="border:1px solid var(--pb,rgba(255,255,255,.1)); background:transparent; color:var(--acc,#ffa42e); border-radius:99px; padding:4px 11px; font-family:'IBM Plex Mono',monospace; font-size:10px; cursor:pointer;">export ↓</button>
+  </div>
+
+  <!-- Hover tooltip -->
+  <div ref="{{ tipRef }}" style="position:fixed; display:none; z-index:30; pointer-events:none; background:var(--panel,rgba(13,16,22,.92)); border:1px solid var(--pb,rgba(255,255,255,.14)); border-radius:14px; padding:11px 14px; backdrop-filter:blur(12px); box-shadow:0 12px 30px rgba(0,0,0,.4); max-width:250px;">
+    <div style="font-weight:700; font-size:14px;">{{ hoverName }}</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--acc,#ffa42e); margin-top:3px;">{{ hoverUsers }} of global usage · {{ hoverAui }} per-capita</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--sub,#8b94a3); margin-top:2px;">top: {{ hoverModel }} · tap for details</div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;theme&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;Mission Control&quot;, &quot;options&quot;: [&quot;Mission Control&quot;, &quot;Editorial Light&quot;, &quot;Neon Pulse&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Look&quot; },
+  &quot;viz&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;Dots&quot;, &quot;options&quot;: [&quot;Dots&quot;, &quot;Bars&quot;, &quot;Heat&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Look&quot; },
+  &quot;autoRotate&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Behavior&quot; },
+  &quot;dotScale&quot;: { &quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 1, &quot;min&quot;: 0.5, &quot;max&quot;: 2, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Look&quot; },
+  &quot;glow&quot;: { &quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 1, &quot;min&quot;: 0, &quot;max&quot;: 2, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Look&quot; }
+}">
+class Component extends DCLogic {
+  state = {
+    year: 2026, query: "", selectedId: null, hoverId: null,
+    isMobile: (typeof window !== "undefined" && window.innerWidth < 900),
+    mobilePanel: 0, themeName: null, vizName: null, eventCount: 0, ready: false
+  };
+  rootRef = React.createRef();
+  globeRef = React.createRef();
+  tipRef = React.createRef();
+
+  THEMES = {
+    "Mission Control": { "--bg":"#07090d","--glow":"rgba(255,158,44,.14)","--panel":"rgba(13,16,22,.72)","--pb":"rgba(255,255,255,.09)","--ink":"#eef1f6","--sub":"#8b94a3","--acc":"#ffa42e","--acc2":"#ffd9a0","--track":"rgba(255,255,255,.1)","--chip":"rgba(255,164,46,.12)",
+      ocean:"#0a1220", land:"#22304a", border:"rgba(160,180,220,.28)", acc:"#ffa42e", hi:"#ffffff" },
+    "Editorial Light": { "--bg":"#f3f1ec","--glow":"rgba(224,123,0,.16)","--panel":"rgba(255,255,255,.85)","--pb":"rgba(20,22,28,.09)","--ink":"#191c22","--sub":"#69707d","--acc":"#d97400","--acc2":"#a15400","--track":"rgba(20,22,28,.1)","--chip":"rgba(217,116,0,.1)",
+      ocean:"#d8d3c8", land:"#faf8f3", border:"rgba(60,55,45,.35)", acc:"#e07b00", hi:"#191c22" },
+    "Neon Pulse": { "--bg":"#060310","--glow":"rgba(255,102,40,.22)","--panel":"rgba(20,10,36,.7)","--pb":"rgba(255,130,220,.18)","--ink":"#f4ecff","--sub":"#9d8fbb","--acc":"#ffb03a","--acc2":"#ff5ad1","--track":"rgba(255,255,255,.12)","--chip":"rgba(255,90,209,.12)",
+      ocean:"#0b0420", land:"#2b1650", border:"rgba(255,120,220,.4)", acc:"#ffb03a", hi:"#ff5ad1" }
+  };
+  CURVES = { early: [0.22, 0.52, 0.80, 1.0], mid: [0.10, 0.34, 0.68, 1.0], late: [0.04, 0.18, 0.52, 1.0] };
+
+  componentDidMount() {
+    try { this.events = JSON.parse(localStorage.getItem("ai_globe_events") || "[]"); } catch (e) { this.events = []; }
+    this.setState({ eventCount: this.events.length });
+    this._onResize = () => {
+      this.setState({ isMobile: window.innerWidth < 900 });
+      if (this.renderer && this.globeRef.current) {
+        const el = this.globeRef.current;
+        this.renderer.setSize(el.clientWidth, el.clientHeight);
+        this.camera.aspect = el.clientWidth / el.clientHeight;
+        this.camera.updateProjectionMatrix();
+      }
+    };
+    window.addEventListener("resize", this._onResize);
+    this._poll = setInterval(() => {
+      if (window.THREE && window.AEI && window.WORLD_TOPO && this.globeRef.current) {
+        clearInterval(this._poll);
+        this.init();
+      }
+    }, 60);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this._poll);
+    cancelAnimationFrame(this._raf);
+    window.removeEventListener("resize", this._onResize);
+    if (this.renderer) this.renderer.dispose();
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (!this.dots) return;
+    const th = this.themeName();
+    if (th !== this._appliedTheme) this.applyTheme();
+    const vz = this.vizName();
+    if (vz !== this._appliedViz) this.applyViz();
+    if (prevState.year !== this.state.year || prevProps.dotScale !== this.props.dotScale || prevProps.glow !== this.props.glow) {
+      this.updateInstances();
+      if (this.vizName() === "heat" && prevState.year !== this.state.year) this.redrawTexture();
+    }
+  }
+
+  themeName() { return this.state.themeName || this.props.theme || "Mission Control"; }
+  vizName() {
+    const v = (this.state.vizName || this.props.viz || "Dots").toLowerCase();
+    return v.indexOf("bar") === 0 || v.indexOf("spike") === 0 ? "bars" : (v.indexOf("heat") === 0 || v.indexOf("chor") === 0 ? "heat" : "dots");
+  }
+
+  applyTheme() {
+    const t = this.THEMES[this.themeName()] || this.THEMES["Mission Control"];
+    const el = this.rootRef.current;
+    if (!el) return;
+    Object.keys(t).forEach(k => { if (k.indexOf("--") === 0) el.style.setProperty(k, t[k]); });
+    this._appliedTheme = this.themeName();
+    if (this.dotMat) {
+      const acc = new THREE.Color(t.acc);
+      this.dotMat.color.set(acc);
+      this.haloMat.color.set(acc);
+      this.barMat.color.set(acc);
+      this.hl.material.color.set(new THREE.Color(t.hi));
+      this.redrawTexture();
+    }
+  }
+
+  applyViz() {
+    const v = this.vizName();
+    this.dots.visible = v !== "bars";
+    this.halos.visible = v === "dots";
+    this.bars.visible = v === "bars";
+    this._appliedViz = v;
+    this.updateInstances();
+    this.redrawTexture();
+  }
+
+  logEvent(type, name) {
+    this.events = this.events || [];
+    this.events.push({ t: Date.now(), type: type, name: name || "" });
+    if (this.events.length > 800) this.events = this.events.slice(-800);
+    try { localStorage.setItem("ai_globe_events", JSON.stringify(this.events)); } catch (e) {}
+    this.setState({ eventCount: this.events.length });
+  }
+
+  yearFactor(c, year) { return this.CURVES[c.curve][year - 2023]; }
+  usageAt(c, year) { return c.usage * this.yearFactor(c, year); }
+
+  latLonToVec3(lat, lon, r) {
+    const phi = (90 - lat) * Math.PI / 180;
+    const theta = (lon + 180) * Math.PI / 180;
+    return new THREE.Vector3(
+      -r * Math.sin(phi) * Math.cos(theta),
+      r * Math.cos(phi),
+      r * Math.sin(phi) * Math.sin(theta)
+    );
+  }
+
+  decodeTopo() {
+    const topo = window.WORLD_TOPO;
+    const sc = topo.transform.scale, tr = topo.transform.translate;
+    const arcs = topo.arcs.map(arc => {
+      let x = 0, y = 0;
+      return arc.map(p => {
+        x += p[0]; y += p[1];
+        return [x * sc[0] + tr[0], y * sc[1] + tr[1]];
+      });
+    });
+    const ringOf = (arcIdxs) => {
+      let ring = [];
+      arcIdxs.forEach(i => {
+        let pts = i >= 0 ? arcs[i] : arcs[~i].slice().reverse();
+        ring = ring.length ? ring.concat(pts.slice(1)) : ring.concat(pts);
+      });
+      return ring;
+    };
+    this.features = topo.objects.countries.geometries.map(g => {
+      let polys = [];
+      if (g.type === "Polygon") polys = [g.arcs.map(ringOf)];
+      else if (g.type === "MultiPolygon") polys = g.arcs.map(poly => poly.map(ringOf));
+      return { name: g.properties.name, iso3: g.properties.iso3 || null, polys: polys };
+    });
+  }
+
+  redrawTexture() {
+    if (!this.features) return;
+    const t = this.THEMES[this.themeName()] || this.THEMES["Mission Control"];
+    const heat = this.vizName() === "heat";
+    const year = this.state.year;
+    const W = 2048, H = 1024;
+    if (!this._texCanvas) this._texCanvas = document.createElement("canvas");
+    const cv = this._texCanvas; cv.width = W; cv.height = H;
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = t.ocean;
+    ctx.fillRect(0, 0, W, H);
+    const land = new THREE.Color(t.land), acc = new THREE.Color(t.acc), tmp = new THREE.Color();
+    const px = (lon) => (lon + 180) / 360 * W;
+    const py = (lat) => (90 - lat) / 180 * H;
+    ctx.lineWidth = 1.1;
+    ctx.strokeStyle = t.border;
+    this.features.forEach(f => {
+      let fill = t.land;
+      if (heat && f.iso3 && this.byIso[f.iso3]) {
+        const c = this.byIso[f.iso3];
+        const v = Math.min(1, (c.aui * this.yearFactor(c, year)) / 2.5);
+        tmp.copy(land).lerp(acc, Math.pow(v, 0.6));
+        fill = "#" + tmp.getHexString();
+      }
+      ctx.fillStyle = fill;
+      f.polys.forEach(rings => {
+        [0, -360, 360].forEach(off => {
+          ctx.beginPath();
+          let drew = false;
+          rings.forEach(ring => {
+            let prev = null, shift = 0;
+            ring.forEach((p, i) => {
+              let lon = p[0] + shift;
+              if (prev != null && Math.abs(lon - prev) > 180) { shift += lon > prev ? -360 : 360; lon = p[0] + shift; }
+              const X = px(lon + off), Y = py(p[1]);
+              if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+              prev = lon; drew = true;
+            });
+            ctx.closePath();
+          });
+          if (drew) { ctx.fill(); ctx.stroke(); }
+        });
+      });
+    });
+    if (!this.tex) {
+      this.tex = new THREE.CanvasTexture(cv);
+      this.tex.colorSpace = THREE.SRGBColorSpace;
+      this.tex.anisotropy = 4;
+      this.globeMat.map = this.tex;
+      this.globeMat.color.set(0xffffff);
+      this.globeMat.needsUpdate = true;
+    } else {
+      this.tex.needsUpdate = true;
+    }
+  }
+
+  init() {
+    this.countries = window.AEI.countries.map((c, i) => ({
+      idx: i, iso3: c.iso3, name: c.name, lat: c.lat, lon: c.lng, region: c.region || "Other",
+      usage: c.usage_pct, aui: c.usage_per_capita_index,
+      work: c.use_case_work_pct, personal: c.use_case_personal_pct, coursework: c.use_case_coursework_pct,
+      autom: c.collaboration_bucket_automation_pct, augm: c.collaboration_bucket_augmentation_pct,
+      autonomy: c.ai_autonomy_mean, multi: c.multitasking_pct,
+      topic: c.top_topic, topicPct: c.top_topic_pct,
+      curve: c.usage_per_capita_index >= 2 ? "early" : (c.usage_per_capita_index >= 0.7 ? "mid" : "late")
+    }));
+    this.byIso = {};
+    this.countries.forEach(c => { this.byIso[c.iso3] = c; });
+    this.maxU = Math.max.apply(null, this.countries.map(c => c.usage));
+    this.decodeTopo();
+
+    const el = this.globeRef.current;
+    const W = el.clientWidth, H = el.clientHeight;
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 100);
+    this.camera.position.z = 3.1;
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setSize(W, H);
+    el.appendChild(this.renderer.domElement);
+
+    this.outer = new THREE.Group();
+    this.inner = new THREE.Group();
+    this.outer.add(this.inner);
+    this.scene.add(this.outer);
+    this.outer.rotation.x = 0.28;
+    this.inner.rotation.y = 2.2;
+
+    this.scene.add(new THREE.AmbientLight(0xffffff, 1.9));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+    dir.position.set(3, 2, 4);
+    this.scene.add(dir);
+
+    this.globeMat = new THREE.MeshPhongMaterial({ color: 0x101a2a, shininess: 4 });
+    this.globe = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 64), this.globeMat);
+    this.inner.add(this.globe);
+
+    const t = this.THEMES[this.themeName()];
+    const accCol = new THREE.Color(t.acc);
+    const dotGeo = new THREE.SphereGeometry(0.011, 10, 10);
+    this.dotMat = new THREE.MeshBasicMaterial({ color: accCol });
+    this.dots = new THREE.InstancedMesh(dotGeo, this.dotMat, this.countries.length);
+    this.haloMat = new THREE.MeshBasicMaterial({ color: accCol, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false });
+    this.halos = new THREE.InstancedMesh(dotGeo, this.haloMat, this.countries.length);
+    this.barMat = new THREE.MeshBasicMaterial({ color: accCol });
+    this.bars = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6), this.barMat, this.countries.length);
+    this.bars.visible = false;
+    this.inner.add(this.dots);
+    this.inner.add(this.halos);
+    this.inner.add(this.bars);
+
+    this.hl = new THREE.Mesh(
+      new THREE.RingGeometry(0.028, 0.036, 32),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, side: THREE.DoubleSide })
+    );
+    this.hl.visible = false;
+    this.inner.add(this.hl);
+
+    this._appliedViz = "dots";
+    this.updateInstances();
+    this.applyTheme();
+    this.applyViz();
+
+    this.ray = new THREE.Raycaster();
+    this.ndc = new THREE.Vector2();
+    this.lastPointer = Date.now();
+    this._drag = null;
+
+    el.addEventListener("pointerdown", (e) => {
+      el.setPointerCapture(e.pointerId);
+      this._drag = { x: e.clientX, y: e.clientY, moved: 0 };
+      this.lastPointer = Date.now();
+      el.style.cursor = "grabbing";
+    });
+    el.addEventListener("pointermove", (e) => {
+      this.lastPointer = Date.now();
+      if (this._drag) {
+        const dx = e.clientX - this._drag.x, dy = e.clientY - this._drag.y;
+        this._drag.x = e.clientX; this._drag.y = e.clientY;
+        this._drag.moved += Math.abs(dx) + Math.abs(dy);
+        this.inner.rotation.y += dx * 0.005;
+        this.outer.rotation.x = Math.max(-1.2, Math.min(1.2, this.outer.rotation.x + dy * 0.004));
+        this._anim = null;
+        this.setHover(null, e);
+      } else {
+        this.setHover(this.pick(e), e);
+      }
+    });
+    el.addEventListener("pointerup", (e) => {
+      el.style.cursor = "grab";
+      const wasDrag = this._drag && this._drag.moved > 7;
+      this._drag = null;
+      if (wasDrag) { this.logEvent("rotate"); return; }
+      const hit = this.pick(e);
+      if (hit) this.select(hit);
+      else if (this.state.selectedId != null) this.setState({ selectedId: null });
+    });
+    el.addEventListener("pointerleave", () => { this._drag = null; this.setHover(null); el.style.cursor = "grab"; });
+
+    this.setState({ ready: true });
+    this.logEvent("session_start");
+
+    const loop = () => {
+      this._raf = requestAnimationFrame(loop);
+      if (this._anim) {
+        const a = this._anim, p = Math.min(1, (Date.now() - a.t0) / a.dur);
+        const e2 = 1 - Math.pow(1 - p, 3);
+        this.inner.rotation.y = a.fromY + (a.toY - a.fromY) * e2;
+        this.outer.rotation.x = a.fromX + (a.toX - a.fromX) * e2;
+        if (p >= 1) this._anim = null;
+      } else if (this.props.autoRotate !== false && Date.now() - this.lastPointer > 2500) {
+        this.inner.rotation.y += 0.0012;
+      }
+      this.renderer.render(this.scene, this.camera);
+    };
+    loop();
+  }
+
+  updateInstances() {
+    const year = this.state.year;
+    const ds = this.props.dotScale || 1;
+    const glow = (this.props.glow == null ? 1 : this.props.glow);
+    const heat = this.vizName() === "heat";
+    this.haloMat.opacity = 0.22 * glow;
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3();
+    const up = new THREE.Vector3(0, 1, 0);
+    this.countries.forEach((c, i) => {
+      const u = this.usageAt(c, year);
+      const rel = Math.sqrt(u / this.maxU);
+      const s = (0.55 + 3.1 * rel) * ds * (heat ? 0.5 : 1);
+      const pos = this.latLonToVec3(c.lat, c.lon, 1.012);
+      Q.identity();
+      S.set(s, s, s);
+      M.compose(pos, Q, S);
+      this.dots.setMatrixAt(i, M);
+      const hs = s * 2.1 * Math.max(glow, 0.001);
+      S.set(hs, hs, hs);
+      M.compose(pos, Q, S);
+      this.halos.setMatrixAt(i, M);
+      // bars
+      const h = (0.03 + 0.55 * rel) * ds;
+      const n = pos.clone().normalize();
+      Q.setFromUnitVectors(up, n);
+      S.set(0.0065, h, 0.0065);
+      M.compose(n.clone().multiplyScalar(1.0 + h / 2), Q, S);
+      this.bars.setMatrixAt(i, M);
+    });
+    this.dots.instanceMatrix.needsUpdate = true;
+    this.halos.instanceMatrix.needsUpdate = true;
+    this.bars.instanceMatrix.needsUpdate = true;
+  }
+
+  pick(e) {
+    if (!this.dots) return null;
+    const r = this.globeRef.current.getBoundingClientRect();
+    this.ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    this.ray.setFromCamera(this.ndc, this.camera);
+    const target = this.vizName() === "bars" ? this.bars : this.dots;
+    const hits = this.ray.intersectObject(target);
+    if (!hits.length) return null;
+    const gHits = this.ray.intersectObject(this.globe);
+    if (gHits.length && gHits[0].distance < hits[0].distance - 0.02) return null;
+    return this.countries[hits[0].instanceId];
+  }
+
+  setHover(c, e) {
+    const tip = this.tipRef.current;
+    const el = this.globeRef.current;
+    if (c && e && tip) {
+      tip.style.display = "block";
+      const x = Math.min(e.clientX + 16, window.innerWidth - 260);
+      const y = Math.min(e.clientY + 14, window.innerHeight - 110);
+      tip.style.left = x + "px";
+      tip.style.top = y + "px";
+      el.style.cursor = "pointer";
+    } else if (tip) {
+      tip.style.display = "none";
+      if (!this._drag) el.style.cursor = "grab";
+    }
+    const id = c ? c.idx : null;
+    if (id !== this.state.hoverId) {
+      this.setState({ hoverId: id });
+      if (this.hl) {
+        this.hl.visible = id != null;
+        if (c) {
+          const p = this.latLonToVec3(c.lat, c.lon, 1.035);
+          this.hl.position.copy(p);
+          this.hl.lookAt(p.clone().multiplyScalar(2));
+        }
+      }
+      if (c) this.logEvent("hover", c.name);
+    }
+  }
+
+  select(c) {
+    this.setState({ selectedId: c.idx, query: "", mobilePanel: 0 });
+    this.logEvent("select", c.name);
+    this.rotateTo(c);
+  }
+
+  rotateTo(c) {
+    const v = this.latLonToVec3(c.lat, c.lon, 1);
+    let toY = Math.atan2(-v.x, v.z);
+    const z1 = Math.hypot(v.x, v.z);
+    const toX = Math.atan2(v.y, z1);
+    const cur = this.inner.rotation.y;
+    while (toY - cur > Math.PI) toY -= 2 * Math.PI;
+    while (toY - cur < -Math.PI) toY += 2 * Math.PI;
+    this._anim = { t0: Date.now(), dur: 900, fromY: cur, toY: toY, fromX: this.outer.rotation.x, toX: toX };
+    this.lastPointer = Date.now() + 2000;
+  }
+
+  fmtP(x) { return x >= 10 ? Math.round(x) + "%" : (x >= 1 ? x.toFixed(1) : x.toFixed(2)) + "%"; }
+
+  exportBlob() {
+    const payload = {
+      exported: new Date().toISOString(),
+      app: "AI Pulse Globe",
+      source: "Anthropic Economic Index (CC-BY)",
+      note: "experimental interaction analytics",
+      events: this.events || []
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ai-globe-analytics.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  renderVals() {
+    const st = this.state;
+    const themes = [
+      { label: "Mission Control", short: "DARK" },
+      { label: "Editorial Light", short: "LIGHT" },
+      { label: "Neon Pulse", short: "NEON" }
+    ].map(t => {
+      const active = t.label === this.themeName();
+      return {
+        label: t.label, short: t.short,
+        bg: active ? "var(--acc,#ffa42e)" : "transparent",
+        fg: active ? "#14161c" : "var(--sub,#8b94a3)",
+        set: () => { this.setState({ themeName: t.label }); this.logEvent("theme", t.label); }
+      };
+    });
+    const vizModes = [
+      { label: "Glowing dots sized by usage", short: "DOTS", key: "dots", name: "Dots" },
+      { label: "3D bars by usage share", short: "BARS", key: "bars", name: "Bars" },
+      { label: "Country heatmap by per-capita index", short: "HEAT", key: "heat", name: "Heat" }
+    ].map(v => {
+      const active = v.key === this.vizName();
+      return {
+        label: v.label, short: v.short,
+        bg: active ? "var(--acc,#ffa42e)" : "transparent",
+        fg: active ? "#14161c" : "var(--sub,#8b94a3)",
+        set: () => { this.setState({ vizName: v.name }); this.logEvent("viz", v.name); }
+      };
+    });
+
+    const base = {
+      rootRef: this.rootRef, globeRef: this.globeRef, tipRef: this.tipRef,
+      year: st.year, query: st.query, eventCount: st.eventCount,
+      isMobile: st.isMobile,
+      showLeft: !st.isMobile || st.mobilePanel === 1,
+      showRight: !st.isMobile || st.mobilePanel === 2,
+      panelBtnLabel: st.mobilePanel === 0 ? "PANELS" : (st.mobilePanel === 1 ? "CHARTS" : "CLOSE"),
+      themes: themes, vizModes: vizModes,
+      cyclePanels: () => this.setState(s => ({ mobilePanel: (s.mobilePanel + 1) % 3 })),
+      onYear: (e) => { this.setState({ year: +e.target.value }); this.logEvent("year", e.target.value); },
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      clearSel: () => this.setState({ selectedId: null }),
+      exportAnalytics: () => { this.logEvent("export"); this.exportBlob(); },
+      hasMatches: false, matches: [], top10: [], regions: [], useCases: [], topics: [],
+      totalF: "…", workF: "…", automF: "…", augmF: "", automPct: 50, countryCount: "…", sel: null,
+      hoverName: "", hoverUsers: "", hoverAui: "", hoverModel: ""
+    };
+    if (!this.countries) return base;
+
+    const y = st.year;
+    const withU = this.countries.map(c => Object.assign({}, c, { u: this.usageAt(c, y) }));
+    const total = withU.reduce((s, c) => s + c.u, 0);
+    const wavg = (f) => withU.reduce((s, c) => s + c[f] * c.u, 0) / total;
+
+    const sorted = withU.slice().sort((a, b) => b.u - a.u);
+    const top10u = sorted.slice(0, 10).reduce((s, c) => s + c.u, 0);
+    base.totalF = Math.round(top10u / total * 100) + "%";
+    base.workF = Math.round(wavg("work")) + "%";
+    const autom = wavg("autom");
+    base.automF = Math.round(autom) + "%";
+    base.augmF = Math.round(wavg("augm")) + "%";
+    base.automPct = Math.round(autom);
+    base.countryCount = this.countries.length;
+
+    base.top10 = sorted.slice(0, 10).map((c, i) => ({
+      rank: (i + 1 < 10 ? "0" : "") + (i + 1), name: c.name,
+      usersF: this.fmtP(c.u), pct: Math.round((c.u / sorted[0].u) * 100),
+      pick: () => this.select(c)
+    }));
+
+    const regMap = {};
+    withU.forEach(c => { regMap[c.region] = (regMap[c.region] || 0) + c.u; });
+    const regs = Object.keys(regMap).map(k => ({ name: k, u: regMap[k] })).sort((a, b) => b.u - a.u);
+    base.regions = regs.map(g => ({
+      name: g.name,
+      shareF: this.fmtP(g.u / total * 100),
+      pct: Math.round((g.u / regs[0].u) * 100)
+    }));
+
+    const ucs = [
+      { name: "Work", v: wavg("work") },
+      { name: "Personal", v: wavg("personal") },
+      { name: "Coursework", v: wavg("coursework") }
+    ];
+    const maxUc = Math.max.apply(null, ucs.map(u => u.v));
+    base.useCases = ucs.map(u => ({ name: u.name, shareF: Math.round(u.v) + "%", pct: Math.round(u.v / maxUc * 100) }));
+
+    const topicMap = {};
+    withU.forEach(c => { topicMap[c.topic] = (topicMap[c.topic] || 0) + c.u; });
+    const tps = Object.keys(topicMap).map(k => ({ name: k, u: topicMap[k] })).sort((a, b) => b.u - a.u).slice(0, 6);
+    base.topics = tps.map(tp => ({
+      name: tp.name,
+      shareF: this.fmtP(tp.u / total * 100),
+      pct: Math.round(tp.u / tps[0].u * 100)
+    }));
+
+    if (st.query.trim()) {
+      const q = st.query.trim().toLowerCase();
+      base.matches = withU.filter(c => c.name.toLowerCase().includes(q)).slice(0, 6)
+        .map(c => ({ name: c.name, usersF: this.fmtP(c.u), pick: () => this.select(c) }));
+      base.hasMatches = base.matches.length > 0;
+    }
+
+    if (st.selectedId != null) {
+      const c = withU.find(x => x.idx === st.selectedId);
+      if (c) {
+        const curve = this.CURVES[c.curve];
+        const maxUse = Math.max(c.work, c.personal, c.coursework);
+        base.sel = {
+          name: c.name, region: c.region, topic: c.topic,
+          usersF: this.fmtP(c.u), auiF: c.aui.toFixed(2) + "×",
+          autonomyF: c.autonomy.toFixed(2), multiF: Math.round(c.multi) + "%",
+          uses: [
+            { name: "work", v: c.work }, { name: "personal", v: c.personal }, { name: "coursework", v: c.coursework }
+          ].map(u => ({ name: u.name, shareF: Math.round(u.v) + "%", pct: Math.round(u.v / maxUse * 100) })),
+          spark: [2023, 2024, 2025, 2026].map((yy, i) => ({
+            y: yy,
+            pct: Math.max(6, Math.round(curve[i] * 100)),
+            color: yy === y ? "var(--acc,#ffa42e)" : "var(--track,rgba(255,255,255,.14))"
+          }))
+        };
+      }
+    }
+
+    if (st.hoverId != null) {
+      const c = withU.find(x => x.idx === st.hoverId);
+      if (c) {
+        base.hoverName = c.name;
+        base.hoverUsers = this.fmtP(c.u);
+        base.hoverAui = c.aui.toFixed(2) + "×";
+        base.hoverModel = c.topic;
+      }
+    }
+    return base;
+  }
+}
+</script>
+</body>
+</html>
