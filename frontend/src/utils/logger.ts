@@ -19,8 +19,16 @@ const log = (level: LogLevel, message: string, data?: unknown): void => {
 };
 
 export const logger = {
-  debug: (message: string, data?: unknown): void => log('debug', message, data),
-  info: (message: string, data?: unknown): void => log('info', message, data),
-  warn: (message: string, data?: unknown): void => log('warn', message, data),
-  error: (message: string, err?: unknown): void => log('error', message, err),
+  debug: (message: string, data?: unknown): void => {
+    log('debug', message, data);
+  },
+  info: (message: string, data?: unknown): void => {
+    log('info', message, data);
+  },
+  warn: (message: string, data?: unknown): void => {
+    log('warn', message, data);
+  },
+  error: (message: string, err?: unknown): void => {
+    log('error', message, err);
+  },
 };

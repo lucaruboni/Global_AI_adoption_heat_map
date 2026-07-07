@@ -1,6 +1,6 @@
 import winston from 'winston';
 
-const logLevel = process.env.LOG_LEVEL || 'info';
+const logLevel = process.env.LOG_LEVEL ?? 'info';
 
 export const logger = winston.createLogger({
   level: logLevel,
@@ -15,9 +15,10 @@ export const logger = winston.createLogger({
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
-        winston.format.printf(({ level, message, timestamp, ...meta }) => {
+        winston.format.printf((info) => {
+          const { level, message, timestamp, ...meta } = info;
           const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '';
-          return `${timestamp} [${level}] ${message} ${metaStr}`;
+          return `${String(timestamp)} [${level}] ${String(message)} ${metaStr}`;
         }),
       ),
     }),

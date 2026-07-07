@@ -1,40 +1,27 @@
 services:
-  # Oracle Autonomous Database (local development)
+  # Oracle Database XE (local development)
+  # Uses gvenzl/oracle-xe: creates the app user via APP_USER/APP_USER_PASSWORD.
+  # Schema/tables are managed by TypeORM (synchronize in dev, migrations in prod),
+  # so we intentionally do NOT auto-run raw SQL init scripts here.
   oracle:
-    image: gvenzl/oracle-xe:23-alpine
+    image: gvenzl/oracle-xe:21-slim
     container_name: ai-heatmap-oracle
     environment:
-      ORACLE_RANDOM_PASSWORD: "true"
-      ORACLE_SID: XEPDB1
-      ORACLE_PDB: XEPDB1
-      ORACLE_ADMIN_USER: ADMIN
-      ORACLE_CHARACTERSET: AL32UTF8
+      ORACLE_PASSWORD: oracle_dev_sys_123
+      APP_USER: aiheatmap
+      APP_USER_PASSWORD: aiheatmap_dev_123
     ports:
       - "1521:1521"
     volumes:
       - oracle-data:/opt/oracle/oradata
-      - ./database-migrations:/docker-entrypoint-initdb.d:ro
     networks:
       - ai-heatmap-network
     healthcheck:
       test: [ "CMD", "healthcheck.sh" ]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 5
-    command:
-      - /bin/bash
-      - -c
-      - |
-        /opt/oracle/createdb.sh &&
-        lsnrctl start &&
-        sqlplus -s / as sysdba <<EOF
-        ALTER SESSION SET CONTAINER=XEPDB1;
-        CREATE USER aiheatmap IDENTIFIED BY aiheatmap_dev_123;
-        GRANT CONNECT, RESOURCE, DBA TO aiheatmap;
-        ALTER USER aiheatmap QUOTA UNLIMITED ON USERS;
-        EXIT;
-        EOF
-        tail -f /opt/oracle/diag/rdbms/xe/XEPDB1/trace/alert_XEPDB1.log
+      retries: 20
+      start_period: 120s
 
   # Redis (caching + session store)
   redis:

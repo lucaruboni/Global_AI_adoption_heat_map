@@ -23,7 +23,7 @@ export default function App(): React.ReactElement {
       }
     };
 
-    checkBackend();
+    void checkBackend();
   }, []);
 
   if (!isReady) {

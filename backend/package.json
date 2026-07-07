@@ -2,12 +2,12 @@
   "name": "@ai-heatmap/backend",
   "version": "0.1.0",
   "description": "Global AI Adoption Heat Map - Backend API",
-  "main": "dist/index.js",
+  "main": "dist/backend/src/index.js",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/backend/src/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -15,9 +15,7 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write src",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "node --experimental-modules ./node_modules/.bin/typeorm migration:run -d dist/database/data-source.js",
-    "db:migrate:dev": "tsx src/database/migrations/run.ts",
-    "db:generate": "typeorm migration:generate -d dist/database/data-source.js",
+    "db:seed": "tsx src/database/seed.ts",
     "prebuild": "npm run lint && npm run typecheck"
   },
   "keywords": [
@@ -32,6 +30,7 @@
   "dependencies": {
     "express": "^4.18.2",
     "express-async-errors": "^3.1.1",
+    "reflect-metadata": "^0.2.1",
     "typeorm": "^0.3.17",
     "oracledb": "^6.2.0",
     "redis": "^4.6.11",
