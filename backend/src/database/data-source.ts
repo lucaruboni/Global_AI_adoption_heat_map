@@ -6,6 +6,7 @@ import { User } from './entities/User';
 import { DownloadRequest } from './entities/DownloadRequest';
 import { CompanyStock } from './entities/CompanyStock';
 import { StockPriceHistory } from './entities/StockPriceHistory';
+import { HardwareSalesIndex } from './entities/HardwareSalesIndex';
 
 /**
  * TypeORM data source for Oracle.
@@ -22,6 +23,14 @@ export const AppDataSource = new DataSource({
   serviceName: config.database.serviceName,
   synchronize: config.isDevelopment,
   logging: config.isDevelopment ? ['error', 'warn'] : ['error'],
-  entities: [Country, CountryStatsSnapshot, User, DownloadRequest, CompanyStock, StockPriceHistory],
+  entities: [
+    Country,
+    CountryStatsSnapshot,
+    User,
+    DownloadRequest,
+    CompanyStock,
+    StockPriceHistory,
+    HardwareSalesIndex,
+  ],
   migrations: ['dist/backend/src/database/migrations/*.js'],
 });

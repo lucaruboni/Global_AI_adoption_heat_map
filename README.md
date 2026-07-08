@@ -125,7 +125,9 @@ This is an **open-source project** and we welcome contributions!
 4. Commit with clear messages: `git commit -m "feat: add new feature"`
 5. Push and open a Pull Request
 
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for detailed guidelines (coming soon).
+See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for detailed guidelines, and
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) / [docs/API.md](docs/API.md) for the
+system design and API reference.
 
 ## 📝 License
 
@@ -139,37 +141,31 @@ Licensed under the **Apache License 2.0**. See [LICENSE](LICENSE) for details.
 
 ## 🗺️ Roadmap
 
-### Phase 1: Foundations ✅ (In Progress)
-- [x] Monorepo setup
-- [x] Docker Compose environment
-- [x] TypeScript configuration
-- [x] Database schema
-- [ ] GitHub Actions CI/CD
+### Phase 1: Foundations ✅
+- [x] Monorepo setup, Docker Compose, TypeScript strict config
+- [x] Oracle database schema, GitHub Actions CI
 
-### Phase 2: Backend API (Coming July 2026)
-- [ ] REST API endpoints
-- [ ] Authentication (JWT)
-- [ ] Data aggregation services
-- [ ] Stock price integration
+### Phase 2: Backend API ✅
+- [x] REST endpoints (countries, regions), TypeORM + Oracle
+- [x] JWT authentication, Zod validation, structured errors
 
-### Phase 3: Frontend UI (Coming July 2026)
-- [ ] Dashboard with charts
-- [ ] Download feature
-- [ ] User registration
-- [ ] Email notifications
+### Phase 3: Frontend UI ✅
+- [x] Three.js globe ported to React (MVP design preserved)
+- [x] Dashboard with charts, email-gated download, user registration
 
-### Phase 4: Data Pipelines (Coming August 2026)
-- [ ] Daily AEI ingestion
-- [ ] Weekly aggregations
-- [ ] Stock price updates
-- [ ] Historical backfills
+### Phase 4: Data Pipelines ✅
+- [x] Historical time-series (2023–2026 backcast snapshots)
+- [x] Company stock valuations, gated server-side CSV download + audit
 
-### Phase 5: Polish & Launch (Coming August 2026)
-- [ ] Performance optimization
-- [ ] Security audit
-- [ ] Comprehensive docs
-- [ ] Public launch
+### Phase 5: Data breadth & open source ✅
+- [x] Hardware sales index (GPU/CPU/RAM) — local-AI-capacity proxy
+- [x] Apache 2.0 license, CONTRIBUTING / ARCHITECTURE / API docs, issue & PR templates
+
+### Next
+- [ ] Live stock feed (Alpha Vantage) + Parquet export
+- [ ] Real (non-backcast) historical sources; email notifications
+- [ ] Bundle code-splitting; deploy to staging/production
 
 ---
 
-**Status**: Pre-release (Phase 1/5 complete) | **Last Updated**: 2026-07-07
+**Status**: All core phases complete & verified | **Last Updated**: 2026-07-08

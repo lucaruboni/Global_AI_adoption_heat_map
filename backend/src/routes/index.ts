@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authController } from '../controllers/AuthController';
 import { countryController } from '../controllers/CountryController';
 import { stockController } from '../controllers/StockController';
+import { hardwareController } from '../controllers/HardwareController';
 import { downloadController } from '../controllers/DownloadController';
 import { authenticate } from '../middleware/authenticate';
 
@@ -22,6 +23,9 @@ apiRouter.get('/history/global', (req, res) => countryController.globalHistory(r
 
 // --- Company stocks (AI / cloud valuations) ---
 apiRouter.get('/stocks', (req, res) => stockController.list(req, res));
+
+// --- Hardware sales index (local AI capacity proxy) ---
+apiRouter.get('/hardware', (req, res) => hardwareController.list(req, res));
 
 // --- Gated dataset download (auth required, 1/day/user, audited) ---
 apiRouter.get('/downloads/dataset', authenticate, (req, res) =>

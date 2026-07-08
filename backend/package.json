@@ -17,6 +17,8 @@
     "typecheck": "tsc --noEmit",
     "db:seed": "tsx src/database/seed.ts",
     "db:seed:stocks": "tsx src/database/seed-stocks.ts",
+    "db:seed:hardware": "tsx src/database/seed-hardware.ts",
+    "db:seed:all": "tsx src/database/seed.ts && tsx src/database/seed-stocks.ts && tsx src/database/seed-hardware.ts",
     "prebuild": "npm run lint && npm run typecheck"
   },
   "keywords": [

@@ -91,6 +91,19 @@ export interface StockSeries {
 }
 
 // ============================================================================
+// HARDWARE SALES (proxy for local / on-prem AI capacity)
+// ============================================================================
+
+export interface HardwareSalesPoint {
+  dateRecorded: string;
+  gpuSalesUnits: number | null;
+  cpuSalesUnits: number | null;
+  ramGbSold: number | null;
+  priceIndex: number | null;
+  source: string | null;
+}
+
+// ============================================================================
 // USERS & AUTH
 // ============================================================================
 

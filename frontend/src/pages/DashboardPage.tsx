@@ -11,10 +11,16 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { GlobalHistoryPoint, RegionalAggregation, StockSeries } from '@shared/index';
+import type {
+  GlobalHistoryPoint,
+  HardwareSalesPoint,
+  RegionalAggregation,
+  StockSeries,
+} from '@shared/index';
 import { useCountries } from '../hooks/useCountries';
 import { countryService } from '../services/countryService';
 import { stockService } from '../services/stockService';
+import { hardwareService } from '../services/hardwareService';
 import { githubService, type GithubStats } from '../services/githubService';
 import { StatTile } from '../components/StatTile';
 import { glassPanel, monoLabel } from '../components/ui';
@@ -36,12 +42,14 @@ export function DashboardPage(): React.ReactElement {
   const [regions, setRegions] = useState<RegionalAggregation[]>([]);
   const [history, setHistory] = useState<GlobalHistoryPoint[]>([]);
   const [stocks, setStocks] = useState<StockSeries[]>([]);
+  const [hardware, setHardware] = useState<HardwareSalesPoint[]>([]);
   const [github, setGithub] = useState<GithubStats | null>(null);
 
   useEffect(() => {
     void countryService.regions().then(setRegions).catch(() => setRegions([]));
     void countryService.globalHistory().then(setHistory).catch(() => setHistory([]));
     void stockService.list().then(setStocks).catch(() => setStocks([]));
+    void hardwareService.list().then(setHardware).catch(() => setHardware([]));
     void githubService.getStats().then(setGithub);
   }, []);
 
@@ -90,6 +98,15 @@ export function DashboardPage(): React.ReactElement {
           marketCap: Number(((s.latestMarketCap ?? 0) / 1e12).toFixed(2)),
         })),
     [stocks]
+  );
+
+  const hardwareData = useMemo(
+    () =>
+      hardware.map((h) => ({
+        year: h.dateRecorded.slice(0, 4),
+        gpuM: Number((((h.gpuSalesUnits ?? 0) / 1e6)).toFixed(0)),
+      })),
+    [hardware]
   );
 
   return (
@@ -206,6 +223,37 @@ export function DashboardPage(): React.ReactElement {
               />
               <Bar dataKey="marketCap" fill={ACCENT} radius={[4, 4, 0, 0]} isAnimationActive={false} />
             </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div style={glassPanel}>
+          <div style={{ ...monoLabel, marginBottom: 16 }}>
+            AI-capable GPUs shipped · millions/yr
+          </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={hardwareData} margin={{ left: 0, right: 8 }}>
+              <defs>
+                <linearGradient id="gpuFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={ACCENT} stopOpacity={0.5} />
+                  <stop offset="100%" stopColor={ACCENT} stopOpacity={0.03} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} stroke="rgba(255,255,255,.06)" />
+              <XAxis dataKey="year" stroke={AXIS} tick={{ fontSize: 11 }} />
+              <YAxis stroke={AXIS} tick={{ fontSize: 11 }} unit="M" />
+              <ReTooltip
+                contentStyle={chartTooltipStyle}
+                formatter={(v: number) => [`${v}M units`, 'GPUs shipped']}
+              />
+              <Area
+                type="monotone"
+                dataKey="gpuM"
+                stroke={ACCENT}
+                strokeWidth={2}
+                fill="url(#gpuFill)"
+                isAnimationActive={false}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
