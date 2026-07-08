@@ -16,6 +16,7 @@
     "format": "prettier --write src",
     "typecheck": "tsc --noEmit",
     "db:seed": "tsx src/database/seed.ts",
+    "db:seed:stocks": "tsx src/database/seed-stocks.ts",
     "prebuild": "npm run lint && npm run typecheck"
   },
   "keywords": [

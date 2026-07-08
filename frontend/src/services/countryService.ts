@@ -1,6 +1,7 @@
 import type {
   ApiSuccess,
   CountryWithStats,
+  GlobalHistoryPoint,
   HistoryPoint,
   RegionalAggregation,
 } from '@shared/index';
@@ -24,6 +25,11 @@ export const countryService = {
 
   async regions(): Promise<RegionalAggregation[]> {
     const { data } = await apiClient.get<ApiSuccess<RegionalAggregation[]>>('/regions');
+    return data.data;
+  },
+
+  async globalHistory(): Promise<GlobalHistoryPoint[]> {
+    const { data } = await apiClient.get<ApiSuccess<GlobalHistoryPoint[]>>('/history/global');
     return data.data;
   },
 };

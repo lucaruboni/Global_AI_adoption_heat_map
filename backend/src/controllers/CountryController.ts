@@ -30,6 +30,11 @@ export class CountryController {
     const regions = await countryService.getRegionalAggregations();
     res.json({ data: regions, meta: { count: regions.length } });
   }
+
+  async globalHistory(_req: Request, res: Response): Promise<void> {
+    const history = await countryService.getGlobalHistory();
+    res.json({ data: history, meta: { count: history.length } });
+  }
 }
 
 export const countryController = new CountryController();

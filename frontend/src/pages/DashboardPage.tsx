@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -9,9 +11,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { RegionalAggregation } from '@shared/index';
+import type { GlobalHistoryPoint, RegionalAggregation, StockSeries } from '@shared/index';
 import { useCountries } from '../hooks/useCountries';
 import { countryService } from '../services/countryService';
+import { stockService } from '../services/stockService';
 import { githubService, type GithubStats } from '../services/githubService';
 import { StatTile } from '../components/StatTile';
 import { glassPanel, monoLabel } from '../components/ui';
@@ -31,10 +34,14 @@ const chartTooltipStyle = {
 export function DashboardPage(): React.ReactElement {
   const { countries, loading } = useCountries();
   const [regions, setRegions] = useState<RegionalAggregation[]>([]);
+  const [history, setHistory] = useState<GlobalHistoryPoint[]>([]);
+  const [stocks, setStocks] = useState<StockSeries[]>([]);
   const [github, setGithub] = useState<GithubStats | null>(null);
 
   useEffect(() => {
     void countryService.regions().then(setRegions).catch(() => setRegions([]));
+    void countryService.globalHistory().then(setHistory).catch(() => setHistory([]));
+    void stockService.list().then(setStocks).catch(() => setStocks([]));
     void githubService.getStats().then(setGithub);
   }, []);
 
@@ -61,6 +68,28 @@ export function DashboardPage(): React.ReactElement {
   const globalTotal = useMemo(
     () => globe.reduce((s, c) => s + c.usage, 0),
     [globe]
+  );
+
+  const historyData = useMemo(
+    () =>
+      history.map((h) => ({
+        year: h.snapshotDate.slice(0, 4),
+        usage: Number(h.totalUsagePct.toFixed(1)),
+      })),
+    [history]
+  );
+
+  const stockData = useMemo(
+    () =>
+      [...stocks]
+        .filter((s) => s.latestMarketCap !== null)
+        .sort((a, b) => (b.latestMarketCap ?? 0) - (a.latestMarketCap ?? 0))
+        .map((s) => ({
+          name: s.symbol,
+          full: s.name,
+          marketCap: Number(((s.latestMarketCap ?? 0) / 1e12).toFixed(2)),
+        })),
+    [stocks]
   );
 
   return (
@@ -119,6 +148,66 @@ export function DashboardPage(): React.ReactElement {
           value="2026-05"
           hint="Anthropic Economic Index"
         />
+      </div>
+
+      {/* Time-series + stocks */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        <div style={glassPanel}>
+          <div style={{ ...monoLabel, marginBottom: 16 }}>
+            Global AI adoption over time · 2023→2026
+          </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={historyData} margin={{ left: 0, right: 8 }}>
+              <defs>
+                <linearGradient id="usageFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={ACCENT} stopOpacity={0.5} />
+                  <stop offset="100%" stopColor={ACCENT} stopOpacity={0.03} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} stroke="rgba(255,255,255,.06)" />
+              <XAxis dataKey="year" stroke={AXIS} tick={{ fontSize: 11 }} />
+              <YAxis stroke={AXIS} tick={{ fontSize: 11 }} unit="%" />
+              <ReTooltip
+                contentStyle={chartTooltipStyle}
+                formatter={(v: number) => [`${v}%`, 'total usage share']}
+              />
+              <Area
+                type="monotone"
+                dataKey="usage"
+                stroke={ACCENT}
+                strokeWidth={2}
+                fill="url(#usageFill)"
+                isAnimationActive={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div style={glassPanel}>
+          <div style={{ ...monoLabel, marginBottom: 16 }}>
+            AI &amp; cloud company market cap · latest ($T)
+          </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={stockData} margin={{ left: 0, right: 8 }}>
+              <CartesianGrid vertical={false} stroke="rgba(255,255,255,.06)" />
+              <XAxis dataKey="name" stroke={AXIS} tick={{ fontSize: 11 }} interval={0} />
+              <YAxis stroke={AXIS} tick={{ fontSize: 11 }} unit="T" />
+              <ReTooltip
+                contentStyle={chartTooltipStyle}
+                cursor={{ fill: 'rgba(255,164,46,.08)' }}
+                formatter={(v: number, _n, p) => [`$${v}T`, (p.payload as { full: string }).full]}
+              />
+              <Bar dataKey="marketCap" fill={ACCENT} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Charts */}

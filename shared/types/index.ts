@@ -63,6 +63,33 @@ export interface HistoryPoint {
   usagePerCapitaIndex: number;
 }
 
+/** Aggregated global usage at a point in time. */
+export interface GlobalHistoryPoint {
+  snapshotDate: string;
+  totalUsagePct: number;
+  avgPerCapitaIndex: number;
+  countryCount: number;
+}
+
+// ============================================================================
+// COMPANY STOCKS (AI / cloud valuations)
+// ============================================================================
+
+export interface StockPricePoint {
+  dateRecorded: string;
+  price: number;
+  marketCap: number | null;
+}
+
+export interface StockSeries {
+  symbol: string;
+  name: string;
+  sector: string | null;
+  prices: StockPricePoint[];
+  latestPrice: number | null;
+  latestMarketCap: number | null;
+}
+
 // ============================================================================
 // USERS & AUTH
 // ============================================================================

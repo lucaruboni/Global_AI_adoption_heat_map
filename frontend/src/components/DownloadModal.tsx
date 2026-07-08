@@ -4,9 +4,8 @@ import { AxiosError } from 'axios';
 import { useAppStore } from '../stores/useAppStore';
 import { authService } from '../services/authService';
 import { githubService } from '../services/githubService';
-import { countryService } from '../services/countryService';
+import { downloadService } from '../services/downloadService';
 import { extractErrorMessage } from '../services/apiClient';
-import { countriesToCsv, downloadTextFile } from '../lib/csv';
 import { logger } from '../utils/logger';
 
 interface FormValues {
@@ -65,12 +64,6 @@ export function DownloadModal(): React.ReactElement {
     defaultValues: { optedInNewsletter: true, starredRepo: false },
   });
 
-  const runDownload = async (): Promise<void> => {
-    const countries = await countryService.list();
-    const csv = countriesToCsv(countries);
-    downloadTextFile('ai-adoption-dataset.csv', csv);
-  };
-
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
     try {
@@ -90,7 +83,7 @@ export function DownloadModal(): React.ReactElement {
           throw err;
         }
       }
-      await runDownload();
+      await downloadService.fetchDataset();
       setDone(true);
     } catch (err) {
       logger.error('Download flow failed', err);

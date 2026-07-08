@@ -1,6 +1,7 @@
 import type {
   CountryWithStats,
   CountryStats,
+  GlobalHistoryPoint,
   HistoryPoint,
   RegionalAggregation,
 } from '@shared/index';
@@ -67,6 +68,30 @@ export class CountryService {
       usagePct: s.usagePct ?? 0,
       usagePerCapitaIndex: s.usagePerCapitaIndex ?? 0,
     }));
+  }
+
+  /** Global usage aggregated per snapshot date — the world's AI adoption over time. */
+  async getGlobalHistory(): Promise<GlobalHistoryPoint[]> {
+    const snapshots = await this.snapshots.find({ order: { snapshotDate: 'ASC' } });
+    const byDate = new Map<string, { usage: number; perCapita: number; count: number }>();
+
+    for (const s of snapshots) {
+      const key = toIsoDate(s.snapshotDate);
+      const agg = byDate.get(key) ?? { usage: 0, perCapita: 0, count: 0 };
+      agg.usage += s.usagePct ?? 0;
+      agg.perCapita += s.usagePerCapitaIndex ?? 0;
+      agg.count += 1;
+      byDate.set(key, agg);
+    }
+
+    return [...byDate.entries()]
+      .map(([snapshotDate, a]) => ({
+        snapshotDate,
+        totalUsagePct: Number(a.usage.toFixed(4)),
+        avgPerCapitaIndex: a.count ? Number((a.perCapita / a.count).toFixed(4)) : 0,
+        countryCount: a.count,
+      }))
+      .sort((a, b) => a.snapshotDate.localeCompare(b.snapshotDate));
   }
 
   /** Aggregate latest usage by region (computed on the fly). */
