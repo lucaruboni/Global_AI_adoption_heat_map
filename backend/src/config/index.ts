@@ -25,6 +25,14 @@ const envSchema = z.object({
   JWT_EXPIRE_IN: z.string().default('7d'),
 
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+
+  ALPHA_VANTAGE_API_KEY: z.string().optional(),
+
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -57,4 +65,12 @@ export const config = Object.freeze({
     expiresIn: parsed.data.JWT_EXPIRE_IN,
   },
   corsOrigin: parsed.data.CORS_ORIGIN,
+  alphaVantageApiKey: parsed.data.ALPHA_VANTAGE_API_KEY ?? null,
+  smtp: {
+    host: parsed.data.SMTP_HOST ?? null,
+    port: parsed.data.SMTP_PORT ?? 587,
+    user: parsed.data.SMTP_USER ?? null,
+    password: parsed.data.SMTP_PASSWORD ?? null,
+    from: parsed.data.SMTP_FROM ?? 'noreply@aiheatmap.local',
+  },
 });

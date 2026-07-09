@@ -4,9 +4,15 @@ import { AxiosError } from 'axios';
 import { useAppStore } from '../stores/useAppStore';
 import { authService } from '../services/authService';
 import { githubService } from '../services/githubService';
-import { downloadService } from '../services/downloadService';
+import { downloadService, type DownloadFormat } from '../services/downloadService';
 import { extractErrorMessage } from '../services/apiClient';
 import { logger } from '../utils/logger';
+
+const FORMATS: { key: DownloadFormat; label: string }[] = [
+  { key: 'csv', label: 'CSV' },
+  { key: 'json', label: 'JSON' },
+  { key: 'parquet', label: 'Parquet' },
+];
 
 interface FormValues {
   email: string;
@@ -55,6 +61,7 @@ export function DownloadModal(): React.ReactElement {
   const setDownloadOpen = useAppStore((s) => s.setDownloadOpen);
   const [serverError, setServerError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [format, setFormat] = useState<DownloadFormat>('csv');
 
   const {
     register,
@@ -83,7 +90,7 @@ export function DownloadModal(): React.ReactElement {
           throw err;
         }
       }
-      await downloadService.fetchDataset();
+      await downloadService.fetchDataset(format);
       setDone(true);
     } catch (err) {
       logger.error('Download flow failed', err);
@@ -236,6 +243,35 @@ export function DownloadModal(): React.ReactElement {
               ★ Star the project on GitHub
             </a>
 
+            <div>
+              <label style={labelStyle}>Format</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {FORMATS.map((f) => {
+                  const active = f.key === format;
+                  return (
+                    <button
+                      key={f.key}
+                      type="button"
+                      onClick={() => setFormat(f.key)}
+                      style={{
+                        flex: 1,
+                        border: '1px solid var(--pb)',
+                        cursor: 'pointer',
+                        borderRadius: 10,
+                        padding: '8px',
+                        fontFamily: "'IBM Plex Mono',monospace",
+                        fontSize: 12,
+                        background: active ? 'var(--acc)' : 'transparent',
+                        color: active ? '#14161c' : 'var(--sub)',
+                      }}
+                    >
+                      {f.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {serverError && <div style={errText}>{serverError}</div>}
 
             <button
@@ -253,7 +289,7 @@ export function DownloadModal(): React.ReactElement {
                 opacity: isSubmitting ? 0.7 : 1,
               }}
             >
-              {isSubmitting ? 'Preparing…' : 'Download CSV ↓'}
+              {isSubmitting ? 'Preparing…' : `Download ${format.toUpperCase()} ↓`}
             </button>
             <div style={{ fontSize: 10, color: 'var(--sub)', textAlign: 'center' }}>
               We store your email only to notify you about the dataset. No spam.

@@ -1,0 +1,79 @@
+# Production stack. Build images from the repo root:
+#   docker compose -f docker-compose.prod.yml up --build -d
+# Provide secrets via a .env file next to this compose file (see .env.prod.example).
+
+services:
+  oracle:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: ai-heatmap-oracle-prod
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_SYS_PASSWORD:?set ORACLE_SYS_PASSWORD}
+      APP_USER: ${DATABASE_USER:-aiheatmap}
+      APP_USER_PASSWORD: ${DATABASE_PASSWORD:?set DATABASE_PASSWORD}
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    networks: [ai-heatmap]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-heatmap-redis-prod
+    networks: [ai-heatmap]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: ai-heatmap-backend-prod
+    environment:
+      NODE_ENV: production
+      DATABASE_HOST: oracle
+      DATABASE_PORT: 1521
+      DATABASE_USER: ${DATABASE_USER:-aiheatmap}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?set DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME:-XEPDB1}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      LOG_LEVEL: info
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@aiheatmap.local}
+    depends_on:
+      oracle:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [ai-heatmap]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: ai-heatmap-frontend-prod
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks: [ai-heatmap]
+
+volumes:
+  oracle-data:
+
+networks:
+  ai-heatmap:
+    driver: bridge

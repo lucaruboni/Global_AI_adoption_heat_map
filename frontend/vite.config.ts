@@ -13,6 +13,15 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three'],
+          recharts: ['recharts'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
   },
   resolve: {
     alias: {

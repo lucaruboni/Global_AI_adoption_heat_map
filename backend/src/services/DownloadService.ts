@@ -1,29 +1,44 @@
+import { readFile, unlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import parquet from '@dsnp/parquetjs';
 import { AppDataSource } from '../database/data-source';
 import { CountryStatsSnapshot } from '../database/entities/CountryStatsSnapshot';
 import { DownloadRequest } from '../database/entities/DownloadRequest';
 import { User } from '../database/entities/User';
 import { ApiError } from '../utils/ApiError';
 import { toIsoDate } from './mappers';
+import { emailService } from './EmailService';
 
-const CSV_COLUMNS = [
-  'iso3',
-  'country',
-  'region',
-  'snapshot_date',
-  'usage_pct',
-  'usage_per_capita_index',
-  'use_case_work_pct',
-  'use_case_personal_pct',
-  'use_case_coursework_pct',
-  'collaboration_automation_pct',
-  'collaboration_augmentation_pct',
-  'ai_autonomy_mean',
-  'multitasking_pct',
-  'top_topic',
-  'top_topic_pct',
-] as const;
+export type DownloadFormat = 'csv' | 'json' | 'parquet';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** A flat, serialization-ready row of the dataset. */
+interface DatasetRow {
+  iso3: string;
+  country: string;
+  region: string;
+  snapshot_date: string;
+  usage_pct: number | null;
+  usage_per_capita_index: number | null;
+  use_case_work_pct: number | null;
+  use_case_personal_pct: number | null;
+  use_case_coursework_pct: number | null;
+  collaboration_automation_pct: number | null;
+  collaboration_augmentation_pct: number | null;
+  ai_autonomy_mean: number | null;
+  multitasking_pct: number | null;
+  top_topic: string | null;
+  top_topic_pct: number | null;
+}
+
+const FORMAT_META: Record<DownloadFormat, { ext: string; contentType: string }> = {
+  csv: { ext: 'csv', contentType: 'text/csv; charset=utf-8' },
+  json: { ext: 'json', contentType: 'application/json; charset=utf-8' },
+  parquet: { ext: 'parquet', contentType: 'application/vnd.apache.parquet' },
+};
 
 function csvCell(value: string | number | null): string {
   if (value === null) return '';
@@ -31,9 +46,56 @@ function csvCell(value: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+function toCsv(rows: DatasetRow[]): Buffer {
+  const cols = Object.keys(rows[0] ?? EMPTY_ROW) as (keyof DatasetRow)[];
+  const header = cols.join(',');
+  const body = rows.map((r) => cols.map((c) => csvCell(r[c])).join(','));
+  return Buffer.from([header, ...body].join('\n'), 'utf-8');
+}
+
+async function toParquet(rows: DatasetRow[]): Promise<Buffer> {
+  const schema = new parquet.ParquetSchema({
+    iso3: { type: 'UTF8' },
+    country: { type: 'UTF8' },
+    region: { type: 'UTF8' },
+    snapshot_date: { type: 'UTF8' },
+    usage_pct: { type: 'DOUBLE', optional: true },
+    usage_per_capita_index: { type: 'DOUBLE', optional: true },
+    use_case_work_pct: { type: 'DOUBLE', optional: true },
+    use_case_personal_pct: { type: 'DOUBLE', optional: true },
+    use_case_coursework_pct: { type: 'DOUBLE', optional: true },
+    collaboration_automation_pct: { type: 'DOUBLE', optional: true },
+    collaboration_augmentation_pct: { type: 'DOUBLE', optional: true },
+    ai_autonomy_mean: { type: 'DOUBLE', optional: true },
+    multitasking_pct: { type: 'DOUBLE', optional: true },
+    top_topic: { type: 'UTF8', optional: true },
+    top_topic_pct: { type: 'DOUBLE', optional: true },
+  });
+
+  // Write to a temp file then read it back — the streaming interface needs a
+  // real Writable with backpressure, which a plain object cannot satisfy.
+  const path = join(tmpdir(), `aidl-${randomUUID()}.parquet`);
+  const writer = await parquet.ParquetWriter.openFile(schema, path);
+  for (const row of rows) {
+    await writer.appendRow(row as unknown as Record<string, unknown>);
+  }
+  await writer.close();
+  const buffer = await readFile(path);
+  await unlink(path).catch(() => undefined);
+  return buffer;
+}
+
+const EMPTY_ROW = {} as DatasetRow;
+
 export interface DownloadMeta {
   ipAddress?: string;
   userAgent?: string;
+}
+
+export interface DownloadResult {
+  filename: string;
+  contentType: string;
+  body: Buffer;
 }
 
 export class DownloadService {
@@ -48,10 +110,14 @@ export class DownloadService {
   }
 
   /**
-   * Builds the full historical dataset as CSV for an authenticated user,
-   * enforcing one download per 24h and recording an audit row.
+   * Builds the full historical dataset in the requested format for an
+   * authenticated user, enforcing one download per 24h and recording an audit row.
    */
-  async generateCsv(userId: number, meta: DownloadMeta): Promise<{ filename: string; csv: string }> {
+  async generate(
+    userId: number,
+    format: DownloadFormat,
+    meta: DownloadMeta
+  ): Promise<DownloadResult> {
     const user = await this.users.findOne({ where: { id: userId } });
     if (!user) throw new ApiError('User not found', 404, 'USER_NOT_FOUND');
 
@@ -63,40 +129,49 @@ export class DownloadService {
       );
     }
 
-    const rows = await this.snapshots.find({
+    const snapshots = await this.snapshots.find({
       relations: { country: true },
       order: { snapshotDate: 'ASC' },
     });
+    const rows: DatasetRow[] = snapshots.map((s) => ({
+      iso3: s.country.iso3,
+      country: s.country.name,
+      region: s.country.region,
+      snapshot_date: toIsoDate(s.snapshotDate),
+      usage_pct: s.usagePct,
+      usage_per_capita_index: s.usagePerCapitaIndex,
+      use_case_work_pct: s.useCaseWorkPct,
+      use_case_personal_pct: s.useCasePersonalPct,
+      use_case_coursework_pct: s.useCaseCourseworkPct,
+      collaboration_automation_pct: s.collaborationAutomationPct,
+      collaboration_augmentation_pct: s.collaborationAugmentationPct,
+      ai_autonomy_mean: s.aiAutonomyMean,
+      multitasking_pct: s.multitaskingPct,
+      top_topic: s.topTopic,
+      top_topic_pct: s.topTopicPct,
+    }));
 
-    const header = CSV_COLUMNS.join(',');
-    const body = rows.map((s) =>
-      [
-        s.country.iso3,
-        s.country.name,
-        s.country.region,
-        toIsoDate(s.snapshotDate),
-        s.usagePct,
-        s.usagePerCapitaIndex,
-        s.useCaseWorkPct,
-        s.useCasePersonalPct,
-        s.useCaseCourseworkPct,
-        s.collaborationAutomationPct,
-        s.collaborationAugmentationPct,
-        s.aiAutonomyMean,
-        s.multitaskingPct,
-        s.topTopic,
-        s.topTopicPct,
-      ]
-        .map(csvCell)
-        .join(',')
-    );
-    const csv = [header, ...body].join('\n');
+    let body: Buffer;
+    if (format === 'json') {
+      body = Buffer.from(JSON.stringify({ generatedAt: new Date().toISOString(), rows }, null, 2));
+    } else if (format === 'parquet') {
+      body = await toParquet(rows);
+    } else {
+      body = toCsv(rows);
+    }
 
-    // Audit + counters
+    await this.recordAudit(user, format, meta);
+    void emailService.sendDatasetReady(user.email, format);
+
+    const { ext, contentType } = FORMAT_META[format];
+    return { filename: `ai-adoption-dataset.${ext}`, contentType, body };
+  }
+
+  private async recordAudit(user: User, format: DownloadFormat, meta: DownloadMeta): Promise<void> {
     await this.downloads.save(
       this.downloads.create({
         user,
-        fileFormat: 'csv',
+        fileFormat: format,
         dataVersion: '2026-05',
         ipAddress: meta.ipAddress ?? null,
         userAgent: meta.userAgent ?? null,
@@ -105,8 +180,6 @@ export class DownloadService {
     user.downloadCount += 1;
     user.lastDownloadAt = new Date();
     await this.users.save(user);
-
-    return { filename: 'ai-adoption-dataset.csv', csv };
   }
 }
 

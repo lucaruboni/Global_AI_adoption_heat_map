@@ -6,6 +6,7 @@ import { User } from '../database/entities/User';
 import { config } from '../config';
 import { ApiError } from '../utils/ApiError';
 import { mapPublicUser } from './mappers';
+import { emailService } from './EmailService';
 
 const SALT_ROUNDS = 10;
 
@@ -35,6 +36,9 @@ export class AuthService {
       optedInNewsletter: payload.optedInNewsletter ? 1 : 0,
     });
     const saved = await this.users.save(user);
+
+    // Fire-and-forget welcome email (no-op if SMTP isn't configured).
+    void emailService.sendWelcome(saved.email);
 
     return { user: mapPublicUser(saved), token: this.signToken(saved) };
   }
