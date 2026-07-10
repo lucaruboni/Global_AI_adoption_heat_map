@@ -35,8 +35,8 @@ Transform raw AI adoption data into actionable insights. This open-source platfo
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/global-ai-adoption-heatmap
-cd global-ai-adoption-heatmap
+git clone https://github.com/lucaruboni/Global_AI_adoption_heat_map
+cd Global_AI_adoption_heat_map
 
 # Start the full stack (frontend + backend + Oracle + Redis)
 docker-compose up
@@ -56,10 +56,11 @@ Visit:
 ## 📚 Documentation
 
 - **[AGENT_RULES.md](AGENT_RULES.md)** — Architecture principles, personas, tech stack (for contributors)
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** — Detailed system design (coming in Phase 2)
-- **[API.md](docs/API.md)** — REST API reference (coming in Phase 2)
-- **[DEVELOPMENT.md](docs/DEVELOPMENT.md)** — Local setup, testing, debugging (coming in Phase 2)
-- **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** — Production checklist (coming in Phase 2)
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — Detailed system design
+- **[docs/API.md](docs/API.md)** — REST API reference
+- **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)** — How to contribute
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** — Local setup, testing, debugging
+- **Production deploy** — `docker-compose.prod.yml` + [.env.prod.example](.env.prod.example)
 
 ## 🏗️ Project Structure
 
@@ -135,8 +136,8 @@ Licensed under the **Apache License 2.0**. See [LICENSE](LICENSE) for details.
 
 ## 🙋 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/global-ai-adoption-heatmap/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/global-ai-adoption-heatmap/discussions)
+- **Issues**: [GitHub Issues](https://github.com/lucaruboni/Global_AI_adoption_heat_map/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/lucaruboni/Global_AI_adoption_heat_map/discussions)
 - **Email**: lucaruboni@gmail.com
 
 ## 🗺️ Roadmap
@@ -161,11 +162,17 @@ Licensed under the **Apache License 2.0**. See [LICENSE](LICENSE) for details.
 - [x] Hardware sales index (GPU/CPU/RAM) — local-AI-capacity proxy
 - [x] Apache 2.0 license, CONTRIBUTING / ARCHITECTURE / API docs, issue & PR templates
 
+### Phase 6: Integrations & production ✅
+- [x] Multi-format export (CSV / JSON / Parquet), frontend code-splitting
+- [x] Live stock feed (Alpha Vantage) + email notifications (graceful fallbacks)
+- [x] Production Docker images (backend + nginx frontend) & compose
+
 ### Next
-- [ ] Live stock feed (Alpha Vantage) + Parquet export
-- [ ] Real (non-backcast) historical sources; email notifications
-- [ ] Bundle code-splitting; deploy to staging/production
+- [ ] Real (non-backcast) historical data sources
+- [ ] Production TypeORM migrations (dev currently uses `synchronize`)
+- [ ] Test suite (unit + integration + E2E)
+- [ ] Redis caching for hot queries
 
 ---
 
-**Status**: All core phases complete & verified | **Last Updated**: 2026-07-08
+**Status**: All core phases complete & verified | **Last Updated**: 2026-07-09

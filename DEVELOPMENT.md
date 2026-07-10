@@ -12,8 +12,8 @@
 ### 2. Clone & Install
 
 ```bash
-git clone https://github.com/yourusername/global-ai-adoption-heatmap
-cd global-ai-adoption-heatmap
+git clone https://github.com/lucaruboni/Global_AI_adoption_heat_map
+cd Global_AI_adoption_heat_map
 npm install
 ```
 
@@ -394,7 +394,7 @@ Or let Git hooks do it automatically! ✅
 - **API questions**: See [API.md](docs/API.md) (coming Phase 2)
 - **Database questions**: Read [database-migrations/](database-migrations/)
 - **Code examples**: Check existing components/services
-- **Issues**: [GitHub Issues](https://github.com/yourusername/global-ai-adoption-heatmap/issues)
+- **Issues**: [GitHub Issues](https://github.com/lucaruboni/Global_AI_adoption_heat_map/issues)
 
 ---
 

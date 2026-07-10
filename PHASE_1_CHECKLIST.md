@@ -128,7 +128,7 @@
 ```bash
 # Clone repo
 git clone <repo-url>
-cd global-ai-adoption-heatmap
+cd Global_AI_adoption_heat_map
 
 # Install & start
 npm install

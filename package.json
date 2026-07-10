@@ -34,7 +34,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/global-ai-adoption-heatmap"
+    "url": "https://github.com/lucaruboni/Global_AI_adoption_heat_map"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
